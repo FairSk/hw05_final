@@ -96,7 +96,7 @@ def follow_index(request):
     for item in user_followed_on:
         followed_posts += Post.objects.filter(author=item.author)
     context = {
-        'page_obj': followed_posts
+        'page_obj': pager(request, followed_posts)
     }
     return render(request, 'posts/follow.html', context)
 
@@ -105,8 +105,11 @@ def follow_index(request):
 def profile_follow(request, username):
     follower = request.user
     following = User.objects.get(username=username)
+    follower_list = follower.follower.all()
+    print(follower_list)
     if follower != following:
-        Follow.objects.create(user=follower, author=following)
+        if not Follow.objects.filter(user=follower, author=following).exists():
+            Follow.objects.create(user=follower, author=following)
     return redirect('posts:profile', username=username)
 
 

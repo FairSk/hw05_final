@@ -76,7 +76,7 @@ class URLSTests(TestCase):
             PROFILE_ULR: 'posts/profile.html',
             CREATE_URL: 'posts/post_create.html',
             self.DETAIL_URL: 'posts/post_detail.html',
-            self.EDIT_URL: 'posts/post_create.html'
+            self.EDIT_URL: 'posts/post_create.html',
         }
         for request, expected_template in TEMPLATES.items():
             with self.subTest(request=request):

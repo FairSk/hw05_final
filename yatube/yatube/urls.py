@@ -9,9 +9,13 @@ urlpatterns = [
     path('auth/', include('users.urls')),
     path('auth/', include('django.contrib.auth.urls')),
     path("about/", include('about.urls', namespace='about')),
+    path('error/', include('core.urls', namespace='core')),
     path('', include('posts.urls', namespace='posts')),
 ]
 handler404 = 'core.views.page_not_found'
+handler403 = 'core.views.csrf_failure'
+handler500 = 'core.views.error_code_500'
+
 
 if settings.DEBUG:
     urlpatterns += static(
