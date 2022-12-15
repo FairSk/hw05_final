@@ -6,40 +6,24 @@
 
 {% block content %}
   <h1>Все посты пользователя {{ author.get_full_name }} </h1>
-  <h3>Всего постов: {{ author.posts.all.count}} </h3> 
-  {% if following %}
-    <a
-      class="btn btn-lg btn-light"
-      href="{% url 'posts:profile_unfollow' author.username %}" role="button"
-    >
-      Отписаться
-    </a>
-  {% else %}
-      <a
-        class="btn btn-lg btn-primary"
-        href="{% url 'posts:profile_follow' author.username %}" role="button"
-      >
-        Подписаться
-      </a>
-   {% endif %}
-  {% for post in page_obj %}
-    <ul>  
-      <li>
-        Автор: {{ post.author.get_full_name }}<br>
-      </li>
-      <li>
-        Дата публикации: {{ post.pub_date|date:"d E Y" }}
-      </li>
-    </ul>
-    <p>{{ post.text|linebreaks }}</p>
-    {% if post.group %}   
-      <a href="{% url 'posts:group_posts' post.group.slug %}">#{{ post.group.title }}</a>
+  <h3>Всего постов: {{ author.posts.count}} </h3> 
+  <h3>Всего подписок: {{ author.follower.count}} </h3> 
+  <h3>Всего подпичиков: {{ author.following.count}} </h3>
+  <h3>Всего комментарев: {{ author.comments.count }} </h3> 
+
+  {% if visible %}
+    {% if following %}
+      <a class="btn btn-lg btn-light"
+      href="{% url 'posts:profile_unfollow' author.username %}"
+      role="button">Отписаться</a>
+    {% else %}
+        <a class="btn btn-lg btn-primary"
+        href="{% url 'posts:profile_follow' author.username %}"
+        role="button">Подписаться</a>
     {% endif %}
+  {% endif %}
 
-    {% if not forloop.last %}<hr>{% endif %}  
-
-  {% endfor %}
-
+  {% include 'posts/includes/show_posts.html' %}
   {% include 'posts/includes/paginator.html' %} 
     
 {% endblock %}

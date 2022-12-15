@@ -13,6 +13,12 @@ GROUP_POST_URL = reverse('posts:group_posts', args=[SLUG])
 PROFILE_ULR = reverse('posts:profile', args=[USERNAME])
 LOGIN_URL = reverse('users:login')
 CREATE_FOR_GUESTS_URL = f"{LOGIN_URL}?next={CREATE_URL}"
+FOLLOW_INDEX_URL = reverse('posts:follow_index')
+PROFILE_FOLLOW_URL = reverse('posts:profile_follow', args=[USERNAME])
+PROFILE_UNFOLLOW_URL = reverse('posts:profile_unfollow', args=[USERNAME])
+FOLLOW_INDEX_GUESTS_URL = f"{LOGIN_URL}?next={FOLLOW_INDEX_URL}"
+PROFILE_FOLLOW_GUESTS_URL = f"{LOGIN_URL}?next={PROFILE_FOLLOW_URL}"
+PROFILE_UNFOLLOW_GUESTS_URL = f"{LOGIN_URL}?next={PROFILE_UNFOLLOW_URL}"
 
 
 class URLSTests(TestCase):
@@ -32,17 +38,20 @@ class URLSTests(TestCase):
         )
         cls.EDIT_URL = reverse('posts:post_edit', args=[URLSTests.post.id])
         cls.DETAIL_URL = reverse('posts:post_detail', args=[URLSTests.post.id])
+        cls.ADD_COMMENT_URL = reverse('posts:add_comment',
+                                      args=[URLSTests.post.id])
         cls.DETAIL_FOR_GUESTS_URL = (f"{LOGIN_URL}?next={cls.EDIT_URL}")
+        cls.COMMENT_GUESTS_URL = (f"{LOGIN_URL}?next={cls.ADD_COMMENT_URL}")
+        cls.guest_client = Client()
+        cls.authorized_client = Client()
+        cls.not_author = Client()
+        cls.authorized_client.force_login(URLSTests.author_user)
+        cls.not_author.force_login(URLSTests.no_author)
 
     def setUp(self):
-        self.guest_client = Client()
-        self.authorized_client = Client()
-        self.not_author = Client()
-        self.authorized_client.force_login(self.author_user)
-        self.not_author.force_login(self.no_author)
         cache.clear()
 
-    def test_pages_access_for_guest(self):
+    def test_pages_access(self):
         ACCESSES = [
             (INDEX_URL, self.guest_client, 200),
             (GROUP_POST_URL, self.guest_client, 200),
@@ -50,9 +59,17 @@ class URLSTests(TestCase):
             (CREATE_URL, self.guest_client, 302),
             (self.DETAIL_URL, self.guest_client, 200),
             (self.EDIT_URL, self.guest_client, 302),
+            (self.ADD_COMMENT_URL, self.guest_client, 302),
+            (PROFILE_FOLLOW_URL, self.guest_client, 302),
+            (PROFILE_UNFOLLOW_URL, self.guest_client, 302),
+            (FOLLOW_INDEX_URL, self.guest_client, 302),
             (CREATE_URL, self.authorized_client, 200),
             (self.EDIT_URL, self.authorized_client, 200),
             ('/404/', self.authorized_client, 404),
+            (self.ADD_COMMENT_URL, self.not_author, 302),
+            (PROFILE_FOLLOW_URL, self.not_author, 302),
+            (PROFILE_UNFOLLOW_URL, self.not_author, 302),
+            (FOLLOW_INDEX_URL, self.not_author, 200),
             (self.EDIT_URL, self.not_author, 302)
         ]
         for url, user, expected_code in ACCESSES:
@@ -64,6 +81,14 @@ class URLSTests(TestCase):
             (self.EDIT_URL, self.not_author, self.DETAIL_URL),
             (CREATE_URL, self.guest_client, CREATE_FOR_GUESTS_URL),
             (self.EDIT_URL, self.guest_client, self.DETAIL_FOR_GUESTS_URL),
+            (self.ADD_COMMENT_URL, self.guest_client, self.COMMENT_GUESTS_URL),
+            (FOLLOW_INDEX_URL, self.guest_client, FOLLOW_INDEX_GUESTS_URL),
+            (PROFILE_FOLLOW_URL, self.guest_client, PROFILE_FOLLOW_GUESTS_URL),
+            (PROFILE_UNFOLLOW_URL, self.guest_client,
+             PROFILE_UNFOLLOW_GUESTS_URL),
+            (self.ADD_COMMENT_URL, self.not_author, self.DETAIL_URL),
+            (PROFILE_FOLLOW_URL, self.not_author, PROFILE_ULR),
+            (PROFILE_UNFOLLOW_URL, self.not_author, PROFILE_ULR),
         ]
         for url, user, redirect_page in REDIRECTS:
             with self.subTest(url=url, user=user):
@@ -77,6 +102,7 @@ class URLSTests(TestCase):
             CREATE_URL: 'posts/post_create.html',
             self.DETAIL_URL: 'posts/post_detail.html',
             self.EDIT_URL: 'posts/post_create.html',
+            FOLLOW_INDEX_URL: 'posts/follow.html'
         }
         for request, expected_template in TEMPLATES.items():
             with self.subTest(request=request):

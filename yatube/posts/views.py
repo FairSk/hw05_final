@@ -10,14 +10,15 @@ POSTS_PER_PAGE = 10
 
 
 def pager(request, post_list):
-    return (Paginator(post_list, POSTS_PER_PAGE)
-            .get_page(request.GET.get('page')))
+    return Paginator(post_list, POSTS_PER_PAGE).get_page(
+        request.GET.get('page'))
 
 
 @cache_page(20)
 def index(request):
     return render(request, 'posts/index.html', {
-        'page_obj': pager(request, Post.objects.all())
+        'page_obj': pager(request, Post.objects.all()),
+        'index': True
     })
 
 
@@ -32,22 +33,24 @@ def group_posts(request, slug):
 def profile(request, username):
     author = get_object_or_404(User, username=username)
     following = False
-    if request.user.is_authenticated:
-        if request.user.follower.filter(author=author):
-            following = True
-    return render(request, 'posts/profile.html',
-                  {'page_obj': pager(request, author.posts.all()),
-                   'author': author, 'following': following})
+    visible = True
+    if (request.user.is_authenticated
+       and request.user.follower.filter(author=author)):
+        following = True
+    if request.user == author:
+        visible = False
+    return render(request, 'posts/profile.html', {
+        'page_obj': pager(request, author.posts.all()),
+        'author': author, 'following': following,
+        'visible': visible})
 
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    form = CommentForm(request.POST or None)
-    comments = post.comments.all()
     return render(request, 'posts/post_detail.html', {
         'post': post,
-        'comments': comments,
-        'form': form
+        'comments': post.comments.all(),
+        'form': CommentForm(request.POST or None)
     })
 
 
@@ -78,7 +81,7 @@ def post_edit(request, post_id):
 
 @login_required
 def add_comment(request, post_id):
-    post = Post.objects.get(id=post_id)
+    post = get_object_or_404(Post, id=post_id)
     form = CommentForm(request.POST or None)
     if form.is_valid():
         comment = form.save(commit=False)
@@ -90,21 +93,16 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    user = request.user
-    user_followed_on = user.follower.all()
-    followed_posts = []
-    for item in user_followed_on:
-        followed_posts += Post.objects.filter(author=item.author)
-    context = {
-        'page_obj': pager(request, followed_posts)
-    }
-    return render(request, 'posts/follow.html', context)
+    followed_posts = Post.objects.filter(author__following__user=request.user)
+    return render(request, 'posts/follow.html', {
+        'page_obj': pager(request, followed_posts),
+        'follow': True})
 
 
 @login_required
 def profile_follow(request, username):
     follower = request.user
-    following = User.objects.get(username=username)
+    following = get_object_or_404(User, username=username)
     follower_list = follower.follower.all()
     print(follower_list)
     if follower != following:
@@ -117,5 +115,5 @@ def profile_follow(request, username):
 def profile_unfollow(request, username):
     follower = request.user
     following = User.objects.get(username=username)
-    Follow.objects.filter(user=follower, author=following).delete()
+    get_object_or_404(Follow, user=follower, author=following).delete()
     return redirect('posts:profile', username=username)

@@ -24,7 +24,11 @@ ANOTHER_PROFILE_FOLLOW_URL = reverse('posts:profile_follow',
                                      args=[ANOTHER_USERNAME])
 ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL = reverse('posts:profile_follow',
                                               args=[ABSOLUTE_ANOTHER_USER])
+ABSOLUTE_ANOTHER_PROFILE_UNFOLLOW_URL = reverse('posts:profile_unfollow',
+                                                args=[ABSOLUTE_ANOTHER_USER])
 FOLLOW_INDEX_URL = reverse('posts:follow_index')
+ANOTHER_PROFILE_ULR = reverse('posts:profile', args=[ANOTHER_USERNAME])
+FOLLOW_INDEX_PAGE_2_URL = reverse('posts:follow_index') + '?page=2'
 
 
 class ViewsTest(TestCase):
@@ -53,14 +57,15 @@ class ViewsTest(TestCase):
         cls.EDIT_URL = reverse('posts:post_edit', args=[ViewsTest.post.id])
         cls.DETAIL_URL = reverse('posts:post_detail',
                                  args=[ViewsTest.post.id])
+        cls.guest_client = Client()
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(ViewsTest.author)
 
     def setUp(self):
-        self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(ViewsTest.author)
         cache.clear()
 
     def test_paginators(self):
+        Follow.objects.create(user=self.author, author=self.author)
         Post.objects.bulk_create(
             Post(text=f'Тестовый текст для паджинатора №{item}',
                  author=ViewsTest.author, group=ViewsTest.group)
@@ -69,6 +74,8 @@ class ViewsTest(TestCase):
             (INDEX_URL, POSTS_PER_PAGE),
             (GROUP_POST_URL, POSTS_PER_PAGE),
             (PROFILE_ULR, POSTS_PER_PAGE),
+            (FOLLOW_INDEX_URL, POSTS_PER_PAGE),
+            (FOLLOW_INDEX_PAGE_2_URL, Post.objects.count() - POSTS_PER_PAGE),
             (INDEX_PAGE_2_URL, Post.objects.count() - POSTS_PER_PAGE),
             (GROUP_POST_PAGE_2_URL, Post.objects.count() - POSTS_PER_PAGE),
             (PROFILE_PAGE_2_ULR, Post.objects.count() - POSTS_PER_PAGE),
@@ -83,8 +90,10 @@ class ViewsTest(TestCase):
             (INDEX_URL, 'page_obj'),
             (GROUP_POST_URL, 'page_obj'),
             (PROFILE_ULR, 'page_obj'),
+            (FOLLOW_INDEX_URL, 'page_obj'),
             (self.DETAIL_URL, 'post')
         ]
+        Follow.objects.create(user=self.author, author=self.author)
         for url, context in URLS:
             with self.subTest(url=url):
                 response = self.authorized_client.get(url)
@@ -112,37 +121,25 @@ class ViewsTest(TestCase):
         self.assertEqual(response.context['author'], self.author)
 
     def test_post_is_not_in_other_group(self):
-        response = self.authorized_client.get(ANOTHER_GROUP_POST_URL)
-        post = response.context['page_obj']
-        self.assertNotIn(self.post, post)
+        URLS = [ANOTHER_GROUP_POST_URL, FOLLOW_INDEX_URL]
+        for url in URLS:
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+                post = response.context['page_obj']
+                self.assertNotIn(self.post, post)
 
     def test_following_ability(self):
-        follow_obj_before_follow = Follow.objects.count()
-        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        follow_obj_after_follow = Follow.objects.count()
-        self.assertEqual(follow_obj_before_follow + 1, follow_obj_after_follow)
-
-    def test_unfollowing_ability(self):
-        follow_obj_before_unfollow = Follow.objects.count()
-        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        follow_obj_after_unfollow = Follow.objects.count()
-        self.assertEqual(follow_obj_before_unfollow,
-                         follow_obj_after_unfollow - 1)
-
-    def if_post_in_followed(self):
-        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        response = self.authorized_client.get(FOLLOW_INDEX_URL)
-        self.assertTrue(self.post in response)
-
-    def if_post_in_not_followed(self):
-        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        response = self.authorized_client.get(FOLLOW_INDEX_URL)
-        another_post = Post.objects.create(
-            text='Другой тестовый текст',
-            author=ViewsTest.another_author,
-            group=ViewsTest.group
-        )
-        self.assertTrue(another_post not in response)
+        URLS = [
+            (ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL, 1),
+            (ABSOLUTE_ANOTHER_PROFILE_UNFOLLOW_URL, -1)
+        ]
+        for url, difference in URLS:
+            with self.subTest(url=url):
+                follow_obj_before = Follow.objects.count()
+                self.authorized_client.get(url)
+                follow_obj_after = Follow.objects.count()
+                self.assertEqual(follow_obj_before + difference,
+                                 follow_obj_after)
 
     def test_following_unability_on_yourself(self):
         follow_obj_before_follow = Follow.objects.count()

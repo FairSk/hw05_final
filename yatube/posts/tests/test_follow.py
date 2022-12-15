@@ -24,6 +24,8 @@ ANOTHER_PROFILE_FOLLOW_URL = reverse('posts:profile_follow',
                                      args=[ANOTHER_USERNAME])
 ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL = reverse('posts:profile_follow',
                                               args=[ABSOLUTE_ANOTHER_USER])
+ABSOLUTE_ANOTHER_PROFILE_UNFOLLOW_URL = reverse('posts:profile_unfollow',
+                                                args=[ABSOLUTE_ANOTHER_USER])
 FOLLOW_INDEX_URL = reverse('posts:follow_index')
 
 
@@ -61,52 +63,36 @@ class FollowTest(TestCase):
         cls.EDIT_URL = reverse('posts:post_edit', args=[FollowTest.post.id])
         cls.DETAIL_URL = reverse('posts:post_detail',
                                  args=[FollowTest.post.id])
+        cls.guest_client = Client()
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(FollowTest.author)
 
     def setUp(self):
-        self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(FollowTest.author)
         cache.clear()
 
     def test_following_ability(self):
-        follow_obj_before_follow = Follow.objects.count()
         self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        follow_obj_after_follow = Follow.objects.count()
-        self.assertEqual(follow_obj_before_follow + 1, follow_obj_after_follow)
+        subscription = Follow.objects.filter(
+            user=self.author, author=self.absolute_another_author).exists()
+        self.assertTrue(subscription)
 
     def test_unfollowing_ability(self):
-        follow_obj_before_unfollow = Follow.objects.count()
-        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        follow_obj_after_unfollow = Follow.objects.count()
-        self.assertEqual(follow_obj_before_unfollow,
-                         follow_obj_after_unfollow - 1)
-
-    def if_post_in_followed(self):
-        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        response = self.authorized_client.get(FOLLOW_INDEX_URL)
-        self.assertTrue(self.post in response)
-
-    def if_post_in_not_followed(self):
-        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        response = self.authorized_client.get(FOLLOW_INDEX_URL)
-        another_post = Post.objects.create(
-            text='Другой тестовый текст',
-            author=FollowTest.another_author,
-            group=FollowTest.group
-        )
-        self.assertTrue(another_post not in response)
+        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_UNFOLLOW_URL)
+        subscription = Follow.objects.filter(
+            user=self.author, author=self.absolute_another_author).exists()
+        self.assertFalse(subscription)
 
     def test_following_unability_on_yourself(self):
-        follow_obj_before_follow = Follow.objects.count()
+        follow_obj_before_follow = list(Follow.objects.all())
         self.authorized_client.get(PROFILE_FOLLOW_URL)
-        follow_obj_after_follow = Follow.objects.count()
+        follow_obj_after_follow = list(Follow.objects.all())
         self.assertEqual(follow_obj_before_follow, follow_obj_after_follow)
 
     def test_follow_only_one_time(self):
         self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        follow_obj_before_follow = Follow.objects.count()
+        follow_obj_before_follow = list(Follow.objects.all())
         self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
-        follow_obj_after_follow = Follow.objects.count()
+        follow_obj_after_follow = list(Follow.objects.all())
         self.assertEqual(follow_obj_before_follow, follow_obj_after_follow)
 
     def test_follow_context(self):
