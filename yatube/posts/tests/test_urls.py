@@ -29,7 +29,7 @@ class URLSTests(TestCase):
         cls.no_author = User.objects.create(username='NotAuthor')
         cls.post = Post.objects.create(
             text='Тестовый текст',
-            author=URLSTests.author_user
+            author=cls.author_user
         )
         cls.group = Group.objects.create(
             title='Тестовый заголовок',
@@ -38,10 +38,7 @@ class URLSTests(TestCase):
         )
         cls.EDIT_URL = reverse('posts:post_edit', args=[URLSTests.post.id])
         cls.DETAIL_URL = reverse('posts:post_detail', args=[URLSTests.post.id])
-        cls.ADD_COMMENT_URL = reverse('posts:add_comment',
-                                      args=[URLSTests.post.id])
         cls.DETAIL_FOR_GUESTS_URL = (f"{LOGIN_URL}?next={cls.EDIT_URL}")
-        cls.COMMENT_GUESTS_URL = (f"{LOGIN_URL}?next={cls.ADD_COMMENT_URL}")
         cls.guest_client = Client()
         cls.authorized_client = Client()
         cls.not_author = Client()
@@ -56,17 +53,16 @@ class URLSTests(TestCase):
             (INDEX_URL, self.guest_client, 200),
             (GROUP_POST_URL, self.guest_client, 200),
             (PROFILE_ULR, self.guest_client, 200),
-            (CREATE_URL, self.guest_client, 302),
             (self.DETAIL_URL, self.guest_client, 200),
+            (CREATE_URL, self.guest_client, 302),
             (self.EDIT_URL, self.guest_client, 302),
-            (self.ADD_COMMENT_URL, self.guest_client, 302),
             (PROFILE_FOLLOW_URL, self.guest_client, 302),
             (PROFILE_UNFOLLOW_URL, self.guest_client, 302),
             (FOLLOW_INDEX_URL, self.guest_client, 302),
             (CREATE_URL, self.authorized_client, 200),
             (self.EDIT_URL, self.authorized_client, 200),
+            (FOLLOW_INDEX_URL, self.authorized_client, 200),
             ('/404/', self.authorized_client, 404),
-            (self.ADD_COMMENT_URL, self.not_author, 302),
             (PROFILE_FOLLOW_URL, self.not_author, 302),
             (PROFILE_UNFOLLOW_URL, self.not_author, 302),
             (FOLLOW_INDEX_URL, self.not_author, 200),
@@ -78,21 +74,20 @@ class URLSTests(TestCase):
 
     def test_redirects(self):
         REDIRECTS = [
+            (PROFILE_FOLLOW_URL, self.not_author, PROFILE_ULR),
+            (PROFILE_UNFOLLOW_URL, self.not_author, PROFILE_ULR),
             (self.EDIT_URL, self.not_author, self.DETAIL_URL),
             (CREATE_URL, self.guest_client, CREATE_FOR_GUESTS_URL),
             (self.EDIT_URL, self.guest_client, self.DETAIL_FOR_GUESTS_URL),
-            (self.ADD_COMMENT_URL, self.guest_client, self.COMMENT_GUESTS_URL),
             (FOLLOW_INDEX_URL, self.guest_client, FOLLOW_INDEX_GUESTS_URL),
             (PROFILE_FOLLOW_URL, self.guest_client, PROFILE_FOLLOW_GUESTS_URL),
             (PROFILE_UNFOLLOW_URL, self.guest_client,
              PROFILE_UNFOLLOW_GUESTS_URL),
-            (self.ADD_COMMENT_URL, self.not_author, self.DETAIL_URL),
-            (PROFILE_FOLLOW_URL, self.not_author, PROFILE_ULR),
-            (PROFILE_UNFOLLOW_URL, self.not_author, PROFILE_ULR),
+            (PROFILE_FOLLOW_URL, self.authorized_client, PROFILE_ULR),
         ]
-        for url, user, redirect_page in REDIRECTS:
-            with self.subTest(url=url, user=user):
-                self.assertRedirects(user.get(url), redirect_page)
+        for url, client, redirect_page in REDIRECTS:
+            with self.subTest(url=url, client=client):
+                self.assertRedirects(client.get(url), redirect_page)
 
     def test_templates(self):
         TEMPLATES = {
@@ -104,7 +99,7 @@ class URLSTests(TestCase):
             self.EDIT_URL: 'posts/post_create.html',
             FOLLOW_INDEX_URL: 'posts/follow.html'
         }
-        for request, expected_template in TEMPLATES.items():
-            with self.subTest(request=request):
-                self.assertTemplateUsed(self.authorized_client.get(request),
+        for url, expected_template in TEMPLATES.items():
+            with self.subTest(url=url):
+                self.assertTemplateUsed(self.authorized_client.get(url),
                                         expected_template)

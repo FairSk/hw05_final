@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from ..models import Post, User, Group, Comment
+from ..models import Post, User, Group, Comment, Follow
 
 
 class ModelTests(TestCase):
@@ -8,6 +8,7 @@ class ModelTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.author = User.objects.create(username="Author")
+        cls.another_author = User.objects.create(username="AnotherAuthor")
         cls.post = Post.objects.create(
             text='Тестовый текст',
             author=ModelTests.author
@@ -22,12 +23,17 @@ class ModelTests(TestCase):
             author=ModelTests.author,
             text='Текст комментария'
         )
+        cls.subscription = Follow.objects.create(
+            user=ModelTests.author,
+            author=ModelTests.another_author
+        )
 
     def test_str_function(self):
         object_names = [
             (self.post, self.post.text, 15),
             (self.group, self.group.title, 20),
-            (self.comment, self.comment.text, 20)
+            (self.comment, self.comment.text, 20),
+            (self.subscription, self.subscription.user.username, 50)
         ]
         for task, text, cut in object_names:
             with self.subTest(text=text):

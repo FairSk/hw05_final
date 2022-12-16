@@ -1,7 +1,6 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.cache import cache
-from django.core.paginator import Page
 
 from ..models import Group, Post, User, Follow
 from ..views import POSTS_PER_PAGE
@@ -126,26 +125,29 @@ class ViewsTest(TestCase):
         for url in URLS:
             with self.subTest(url=url):
                 response = self.authorized_client.get(url)
-                post = response.context['page_obj']
-                self.assertNotIn(self.post, post)
+                self.assertNotIn(self.post, response.context['page_obj'])
 
-    def test_following_ability(self):
-        URLS = [
-            (ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL, 1, True),
-            (ABSOLUTE_ANOTHER_PROFILE_UNFOLLOW_URL, -1, False)
-        ]
+    def test_follow_ability(self):
+        follow_obj_before = Follow.objects.count()
+        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
+        subscription = Follow.objects.filter(
+            user=self.author,
+            author=self.absolute_another_author).exists()
+        follow_obj_after = Follow.objects.count()
+        self.assertEqual(follow_obj_before + 1,
+                         follow_obj_after)
+        self.assertTrue(subscription)
 
-        for url, difference, expected_bool in URLS:
-            with self.subTest(url=url):
-                follow_obj_before = Follow.objects.count()
-                self.authorized_client.get(url)
-                subscription = Follow.objects.filter(
-                    user=self.author,
-                    author=self.absolute_another_author).exists()
-                follow_obj_after = Follow.objects.count()
-                self.assertEqual(follow_obj_before + difference,
-                                 follow_obj_after)
-                self.assertEqual(subscription, expected_bool)
+    def test_unfollow_ability(self):
+        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
+        follow_obj_before = Follow.objects.count()
+        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_UNFOLLOW_URL)
+        subscription = Follow.objects.filter(
+            user=self.author,
+            author=self.absolute_another_author).exists()
+        follow_obj_after = Follow.objects.count()
+        self.assertEqual(follow_obj_before - 1, follow_obj_after)
+        self.assertFalse(subscription)
 
     def test_following_unability_on_yourself(self):
         follow_obj_before_follow = list(Follow.objects.all())
@@ -159,7 +161,3 @@ class ViewsTest(TestCase):
         self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
         follow_obj_after_follow = list(Follow.objects.all())
         self.assertEqual(follow_obj_before_follow, follow_obj_after_follow)
-
-    def test_follow_context(self):
-        response = self.authorized_client.get(FOLLOW_INDEX_URL)
-        self.assertIsInstance(response.context['page_obj'], Page)

@@ -15,7 +15,7 @@ class Group(models.Model):
         verbose_name_plural = 'Группы'
 
     def __str__(self):
-        return self.title[:20]
+        return self.title
 
 
 class Post(models.Model):
@@ -101,6 +101,9 @@ class Follow(models.Model):
         related_name='following',
         verbose_name='Автор'
     )
+
+    def __str__(self):
+        return self.user.username
 
     class Meta:
         verbose_name = 'Подписка'

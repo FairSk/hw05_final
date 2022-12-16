@@ -17,8 +17,7 @@ def pager(request, post_list):
 @cache_page(20)
 def index(request):
     return render(request, 'posts/index.html', {
-        'page_obj': pager(request, Post.objects.all()),
-        'index': True
+        'page_obj': pager(request, Post.objects.all())
     })
 
 
@@ -33,23 +32,18 @@ def group_posts(request, slug):
 def profile(request, username):
     author = get_object_or_404(User, username=username)
     following = False
-    visible = True
-    if (request.user.is_authenticated
+    if (author and request.user.is_authenticated
        and request.user.follower.filter(author=author)):
         following = True
-    if request.user == author:
-        visible = False
     return render(request, 'posts/profile.html', {
         'page_obj': pager(request, author.posts.all()),
-        'author': author, 'following': following,
-        'visible': visible})
+        'author': author, 'following': following})
 
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     return render(request, 'posts/post_detail.html', {
         'post': post,
-        'comments': post.comments.all(),
         'form': CommentForm(request.POST or None)
     })
 
@@ -95,16 +89,13 @@ def add_comment(request, post_id):
 def follow_index(request):
     followed_posts = Post.objects.filter(author__following__user=request.user)
     return render(request, 'posts/follow.html', {
-        'page_obj': pager(request, followed_posts),
-        'follow': True})
+        'page_obj': pager(request, followed_posts)})
 
 
 @login_required
 def profile_follow(request, username):
     follower = request.user
     following = get_object_or_404(User, username=username)
-    follower_list = follower.follower.all()
-    print(follower_list)
     if follower != following:
         if not Follow.objects.filter(user=follower, author=following).exists():
             Follow.objects.create(user=follower, author=following)
@@ -115,5 +106,7 @@ def profile_follow(request, username):
 def profile_unfollow(request, username):
     follower = request.user
     following = User.objects.get(username=username)
+    # Что-от у меня не получилось в строчке ниже востользоваться
+    # поиском через поля
     get_object_or_404(Follow, user=follower, author=following).delete()
     return redirect('posts:profile', username=username)
