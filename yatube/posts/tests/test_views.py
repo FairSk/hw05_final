@@ -139,7 +139,10 @@ class ViewsTest(TestCase):
         self.assertTrue(subscription)
 
     def test_unfollow_ability(self):
-        self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL)
+        Follow.objects.create(
+            user=self.author,
+            author=self.absolute_another_author
+        )
         follow_obj_before = Follow.objects.count()
         self.authorized_client.get(ABSOLUTE_ANOTHER_PROFILE_UNFOLLOW_URL)
         subscription = Follow.objects.filter(

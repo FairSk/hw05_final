@@ -3,6 +3,8 @@
 {% block title %}Последние обновления на сайте{% endblock %}
 {% block content %}
   {% include 'posts/includes/switcher.html' with follow=True %}
+  {% for post in page_obj %}
   {% include 'posts/includes/show_posts.html' %}
+  {% endfor %}
   {% include 'posts/includes/paginator.html' %}
 {% endblock %}

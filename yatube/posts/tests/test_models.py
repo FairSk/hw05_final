@@ -31,10 +31,14 @@ class ModelTests(TestCase):
     def test_str_function(self):
         object_names = [
             (self.post, self.post.text, 15),
-            (self.group, self.group.title, 20),
-            (self.comment, self.comment.text, 20),
-            (self.subscription, self.subscription.user.username, 50)
+            (self.group, self.group.title, None),
+            (self.comment, self.comment.text, 20)
         ]
         for task, text, cut in object_names:
             with self.subTest(text=text):
                 self.assertEqual(text[:cut], str(task))
+
+    def test_follow_str(self):
+        self.assertEqual(str(self.subscription),
+                         f'{self.subscription.user.username} -> '
+                         f'{self.subscription.author.username}')

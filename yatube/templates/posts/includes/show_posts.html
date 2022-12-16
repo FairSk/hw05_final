@@ -1,5 +1,4 @@
 {% load thumbnail %}
-{% for post in page_obj %}
     <ul>
       <li> 
         Автор:
@@ -19,4 +18,3 @@
         {% endif %}
     {% endif %}
     {% if not forloop.last %}<hr>{% endif %}
-  {% endfor %}

@@ -7,15 +7,18 @@ from ..models import Group, Post, User
 
 SLUG = 'group-slug'
 USERNAME = 'Author'
+ANOTHER_USERNAME = 'AnotherUser'
 INDEX_URL = reverse('posts:index')
 CREATE_URL = reverse('posts:post_create')
 GROUP_POST_URL = reverse('posts:group_posts', args=[SLUG])
 PROFILE_ULR = reverse('posts:profile', args=[USERNAME])
+ANOTHER_PROFILE_URL = reverse('posts:profile', args=[ANOTHER_USERNAME])
 LOGIN_URL = reverse('users:login')
 CREATE_FOR_GUESTS_URL = f"{LOGIN_URL}?next={CREATE_URL}"
 FOLLOW_INDEX_URL = reverse('posts:follow_index')
-PROFILE_FOLLOW_URL = reverse('posts:profile_follow', args=[USERNAME])
-PROFILE_UNFOLLOW_URL = reverse('posts:profile_unfollow', args=[USERNAME])
+PROFILE_FOLLOW_URL = reverse('posts:profile_follow', args=[ANOTHER_USERNAME])
+PROFILE_UNFOLLOW_URL = reverse('posts:profile_unfollow',
+                               args=[ANOTHER_USERNAME])
 FOLLOW_INDEX_GUESTS_URL = f"{LOGIN_URL}?next={FOLLOW_INDEX_URL}"
 PROFILE_FOLLOW_GUESTS_URL = f"{LOGIN_URL}?next={PROFILE_FOLLOW_URL}"
 PROFILE_UNFOLLOW_GUESTS_URL = f"{LOGIN_URL}?next={PROFILE_UNFOLLOW_URL}"
@@ -26,6 +29,8 @@ class URLSTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.author_user = User.objects.create(username=USERNAME)
+        cls.another_author_user = User.objects.create(
+            username=ANOTHER_USERNAME)
         cls.no_author = User.objects.create(username='NotAuthor')
         cls.post = Post.objects.create(
             text='Тестовый текст',
@@ -50,40 +55,43 @@ class URLSTests(TestCase):
 
     def test_pages_access(self):
         ACCESSES = [
-            (INDEX_URL, self.guest_client, 200),
-            (GROUP_POST_URL, self.guest_client, 200),
-            (PROFILE_ULR, self.guest_client, 200),
-            (self.DETAIL_URL, self.guest_client, 200),
-            (CREATE_URL, self.guest_client, 302),
-            (self.EDIT_URL, self.guest_client, 302),
-            (PROFILE_FOLLOW_URL, self.guest_client, 302),
-            (PROFILE_UNFOLLOW_URL, self.guest_client, 302),
-            (FOLLOW_INDEX_URL, self.guest_client, 302),
-            (CREATE_URL, self.authorized_client, 200),
-            (self.EDIT_URL, self.authorized_client, 200),
-            (FOLLOW_INDEX_URL, self.authorized_client, 200),
             ('/404/', self.authorized_client, 404),
+            (CREATE_URL, self.guest_client, 302),
+            (CREATE_URL, self.authorized_client, 200),
+            (FOLLOW_INDEX_URL, self.guest_client, 302),
+            (FOLLOW_INDEX_URL, self.authorized_client, 200),
+            (GROUP_POST_URL, self.guest_client, 200),
+            (INDEX_URL, self.guest_client, 200),
+            (PROFILE_FOLLOW_URL, self.guest_client, 302),
             (PROFILE_FOLLOW_URL, self.not_author, 302),
+            (PROFILE_FOLLOW_URL, self.authorized_client, 302),
+            (PROFILE_ULR, self.guest_client, 200),
+            (PROFILE_UNFOLLOW_URL, self.guest_client, 302),
             (PROFILE_UNFOLLOW_URL, self.not_author, 302),
-            (FOLLOW_INDEX_URL, self.not_author, 200),
+            (PROFILE_UNFOLLOW_URL, self.authorized_client, 302),
+            (self.DETAIL_URL, self.guest_client, 200),
+            (self.EDIT_URL, self.guest_client, 302),
+            (self.EDIT_URL, self.authorized_client, 200),
             (self.EDIT_URL, self.not_author, 302)
         ]
-        for url, user, expected_code in ACCESSES:
-            with self.subTest(url=url, user=user):
-                self.assertEqual(user.get(url).status_code, expected_code)
+        for url, client, expected_code in ACCESSES:
+            with self.subTest(url=url, user=client):
+                self.assertEqual(client.get(url).status_code, expected_code)
 
     def test_redirects(self):
         REDIRECTS = [
-            (PROFILE_FOLLOW_URL, self.not_author, PROFILE_ULR),
-            (PROFILE_UNFOLLOW_URL, self.not_author, PROFILE_ULR),
-            (self.EDIT_URL, self.not_author, self.DETAIL_URL),
             (CREATE_URL, self.guest_client, CREATE_FOR_GUESTS_URL),
-            (self.EDIT_URL, self.guest_client, self.DETAIL_FOR_GUESTS_URL),
             (FOLLOW_INDEX_URL, self.guest_client, FOLLOW_INDEX_GUESTS_URL),
             (PROFILE_FOLLOW_URL, self.guest_client, PROFILE_FOLLOW_GUESTS_URL),
+            (PROFILE_FOLLOW_URL, self.not_author, ANOTHER_PROFILE_URL),
+            (PROFILE_FOLLOW_URL, self.authorized_client, ANOTHER_PROFILE_URL),
             (PROFILE_UNFOLLOW_URL, self.guest_client,
              PROFILE_UNFOLLOW_GUESTS_URL),
-            (PROFILE_FOLLOW_URL, self.authorized_client, PROFILE_ULR),
+            (PROFILE_UNFOLLOW_URL, self.not_author, ANOTHER_PROFILE_URL),
+            (PROFILE_UNFOLLOW_URL, self.authorized_client,
+             ANOTHER_PROFILE_URL),
+            (self.EDIT_URL, self.not_author, self.DETAIL_URL),
+            (self.EDIT_URL, self.guest_client, self.DETAIL_FOR_GUESTS_URL),
         ]
         for url, client, redirect_page in REDIRECTS:
             with self.subTest(url=url, client=client):

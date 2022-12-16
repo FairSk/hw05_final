@@ -19,6 +19,14 @@ PROFILE_ULR = reverse('posts:profile', args=[USERNAME])
 CREATE_GUEST_URL = f'{LOGIN_URL}?next={CREATE_URL}'
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
+SMALL_GIF = (
+    b'\x47\x49\x46\x38\x39\x61\x02\x00'
+    b'\x01\x00\x80\x00\x00\x00\x00\x00'
+    b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+    b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+    b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+    b'\x0A\x00\x3B'
+)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -26,22 +34,14 @@ class FormsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B'
-        )
         cls.uploaded = SimpleUploadedFile(
             name='small.gif',
-            content=cls.small_gif,
+            content=SMALL_GIF,
             content_type='gif'
         )
         cls.another_uploaded = SimpleUploadedFile(
             name='another_small.gif',
-            content=cls.small_gif,
+            content=SMALL_GIF,
             content_type='gif'
         )
         cls.group = Group.objects.create(
@@ -59,8 +59,7 @@ class FormsTest(TestCase):
         cls.post = Post.objects.create(
             text='Тестовый текст',
             author=FormsTest.author,
-            group=FormsTest.group,
-            image=cls.uploaded
+            group=FormsTest.group
         )
         cls.EDIT_URL = reverse('posts:post_edit', args=[FormsTest.post.id])
         cls.EDIT_NOT_AUTHOR_URL = f'{LOGIN_URL}?next={cls.EDIT_URL}'
@@ -82,7 +81,7 @@ class FormsTest(TestCase):
         form_data = {
             'text': 'Текст для нового поста',
             'group': self.group.id,
-            'image': self.uploaded
+            'image': self.uploaded.name
         }
         before_creating = set(Post.objects.all())
         response = self.authorized_client.post(CREATE_URL,
@@ -95,7 +94,6 @@ class FormsTest(TestCase):
         self.assertEqual(post.author, self.author)
         self.assertEqual(post.group.id, form_data['group'])
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(post.image, form_data['image'])
         self.assertRedirects(response, PROFILE_ULR)
 
     def test_edit_post_form(self):
@@ -111,6 +109,7 @@ class FormsTest(TestCase):
         self.assertEqual(post.text, form_data['text'])
         self.assertEqual(post.author, self.post.author)
         self.assertEqual(post.group.id, form_data['group'])
+        self.assertEqual(post.image.name, f'posts/{form_data["image"].name}')
         self.assertRedirects(response, self.DETAIL_URL)
 
     def test_create_commment_form(self):
@@ -134,27 +133,27 @@ class FormsTest(TestCase):
         form_data = {
             'text': 'Текст для комментария'
         }
-        before_creating = list(Comment.objects.all())
+        before_creating = set(Comment.objects.all())
         self.guest_client.post(self.COMMENT_URL,
                                data=form_data, follow=True)
-        after_creating = list(Comment.objects.all())
+        after_creating = set(Comment.objects.all())
         self.assertEqual(after_creating, before_creating)
 
-    def test_create_post_form(self):
+    def test_guest_create_post_form(self):
         form_data = {
             'text': 'Текст для нового поста',
             'group': self.group.id,
             'image': self.uploaded
         }
-        before_creating = list(Post.objects.all())
+        before_creating = set(Post.objects.all())
         response = self.guest_client.post(CREATE_URL,
                                           data=form_data, follow=True)
-        after_creating = list(Post.objects.all())
+        after_creating = set(Post.objects.all())
         self.assertEqual(before_creating, after_creating)
         self.assertRedirects(response, CREATE_GUEST_URL)
 
     def test_not_author_edit_form(self):
-        CLIENTS = [
+        CASES = [
             (self.not_author, self.EDIT_NOT_AUTHOR_URL),
             (self.guest_client, self.EDIT_NOT_AUTHOR_URL)
         ]
@@ -163,7 +162,7 @@ class FormsTest(TestCase):
             'group': self.another_group.id,
             'image': self.uploaded
         }
-        for client, expected_redirect in CLIENTS:
+        for client, expected_redirect in CASES:
             with self.subTest(client=client):
                 response = self.client.post(self.EDIT_URL,
                                             data=form_data, follow=True)

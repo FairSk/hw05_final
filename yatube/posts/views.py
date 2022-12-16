@@ -31,19 +31,18 @@ def group_posts(request, slug):
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    following = False
-    if (author and request.user.is_authenticated
-       and request.user.follower.filter(author=author)):
-        following = True
+    following = (True if (request.user != author
+                          and request.user.is_authenticated
+                          and request.user.follower.filter(author=author))
+                 else False)
     return render(request, 'posts/profile.html', {
         'page_obj': pager(request, author.posts.all()),
         'author': author, 'following': following})
 
 
 def post_detail(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
     return render(request, 'posts/post_detail.html', {
-        'post': post,
+        'post': get_object_or_404(Post, id=post_id),
         'form': CommentForm(request.POST or None)
     })
 
@@ -87,9 +86,9 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    followed_posts = Post.objects.filter(author__following__user=request.user)
     return render(request, 'posts/follow.html', {
-        'page_obj': pager(request, followed_posts)})
+        'page_obj': pager(request, Post.objects.filter(
+            author__following__user=request.user))})
 
 
 @login_required
@@ -105,8 +104,6 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     follower = request.user
-    following = User.objects.get(username=username)
-    # Что-от у меня не получилось в строчке ниже востользоваться
-    # поиском через поля
-    get_object_or_404(Follow, user=follower, author=following).delete()
+    get_object_or_404(Follow, user=follower,
+                      author__username=username).delete()
     return redirect('posts:profile', username=username)

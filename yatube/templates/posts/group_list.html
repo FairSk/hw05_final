@@ -9,11 +9,9 @@
 {% block content %}
   <h1> {{ group.title}} </h1>
   <p>{{group.description|linebreaks }}</p>
-  {% include 'posts/includes/show_posts.html' %}
   {% include 'posts/includes/paginator.html' %}
-
-  {# извинясь, без этих строк pytest не пропускает код, он прямо требует цикл #}
   {% for post in page_obj %}
+  {% include 'posts/includes/show_posts.html' %}
   {% endfor %}
 
   {% endblock %}
