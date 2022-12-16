@@ -134,7 +134,7 @@ class ViewsTest(TestCase):
             (ABSOLUTE_ANOTHER_PROFILE_FOLLOW_URL, 1, True),
             (ABSOLUTE_ANOTHER_PROFILE_UNFOLLOW_URL, -1, False)
         ]
-        
+
         for url, difference, expected_bool in URLS:
             with self.subTest(url=url):
                 follow_obj_before = Follow.objects.count()
@@ -163,4 +163,3 @@ class ViewsTest(TestCase):
     def test_follow_context(self):
         response = self.authorized_client.get(FOLLOW_INDEX_URL)
         self.assertIsInstance(response.context['page_obj'], Page)
-
