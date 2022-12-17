@@ -81,7 +81,7 @@ class FormsTest(TestCase):
         form_data = {
             'text': 'Текст для нового поста',
             'group': self.group.id,
-            'image': self.uploaded.name
+            'image': self.uploaded
         }
         before_creating = set(Post.objects.all())
         response = self.authorized_client.post(CREATE_URL,
@@ -94,6 +94,7 @@ class FormsTest(TestCase):
         self.assertEqual(post.author, self.author)
         self.assertEqual(post.group.id, form_data['group'])
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(post.image.name, f'posts/{form_data["image"].name}')
         self.assertRedirects(response, PROFILE_ULR)
 
     def test_edit_post_form(self):
