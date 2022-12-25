@@ -6,7 +6,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-
+from ..apps import PostsConfig
 from ..models import Group, Post, User, Comment
 
 LOGIN_URL = reverse('users:login')
@@ -94,7 +94,8 @@ class FormsTest(TestCase):
         self.assertEqual(post.author, self.author)
         self.assertEqual(post.group.id, form_data['group'])
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(post.image.name, f'posts/{form_data["image"].name}')
+        self.assertEqual(post.image.name, (f'{PostsConfig.name}/'
+                                           f'{form_data["image"].name}'))
         self.assertRedirects(response, PROFILE_ULR)
 
     def test_edit_post_form(self):
@@ -110,7 +111,8 @@ class FormsTest(TestCase):
         self.assertEqual(post.text, form_data['text'])
         self.assertEqual(post.author, self.post.author)
         self.assertEqual(post.group.id, form_data['group'])
-        self.assertEqual(post.image.name, f'posts/{form_data["image"].name}')
+        self.assertEqual(post.image.name, (f'{PostsConfig.name}/'
+                                           f'{form_data["image"].name}'))
         self.assertRedirects(response, self.DETAIL_URL)
 
     def test_create_commment_form(self):
@@ -137,8 +139,7 @@ class FormsTest(TestCase):
         before_creating = set(Comment.objects.all())
         self.guest_client.post(self.COMMENT_URL,
                                data=form_data, follow=True)
-        after_creating = set(Comment.objects.all())
-        self.assertEqual(after_creating, before_creating)
+        self.assertEqual(set(Comment.objects.all()), before_creating)
 
     def test_guest_create_post_form(self):
         form_data = {
@@ -149,11 +150,10 @@ class FormsTest(TestCase):
         before_creating = set(Post.objects.all())
         response = self.guest_client.post(CREATE_URL,
                                           data=form_data, follow=True)
-        after_creating = set(Post.objects.all())
-        self.assertEqual(before_creating, after_creating)
+        self.assertEqual(before_creating, set(Post.objects.all()))
         self.assertRedirects(response, CREATE_GUEST_URL)
 
-    def test_not_author_edit_form(self):
+    def test_edit_form_for_guest_or_not_author(self):
         CASES = [
             (self.not_author, self.EDIT_NOT_AUTHOR_URL),
             (self.guest_client, self.EDIT_NOT_AUTHOR_URL)

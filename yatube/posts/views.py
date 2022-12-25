@@ -31,13 +31,11 @@ def group_posts(request, slug):
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    following = (True if (request.user != author
-                          and request.user.is_authenticated
-                          and request.user.follower.filter(author=author))
-                 else False)
     return render(request, 'posts/profile.html', {
         'page_obj': pager(request, author.posts.all()),
-        'author': author, 'following': following})
+        'author': author, 'following': request.user.is_authenticated
+        and request.user != author
+        and author.following.filter(user=request.user).exists()})
 
 
 def post_detail(request, post_id):
@@ -104,7 +102,6 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
-    follower = request.user
-    get_object_or_404(Follow, user=follower,
+    get_object_or_404(Follow, user=request.user,
                       author__username=username).delete()
     return redirect('posts:profile', username=username)

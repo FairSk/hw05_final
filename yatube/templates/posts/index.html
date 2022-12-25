@@ -11,7 +11,7 @@
 {% include 'posts/includes/switcher.html' with index=True %}
   <h1>Последние обновления.</h1>
   {% for post in page_obj %}
-  {% include 'posts/includes/show_posts.html' %}
+    {% include 'posts/includes/show_post.html' %}
   {% endfor %}
   {% include 'posts/includes/paginator.html' %}
 {% endblock %}

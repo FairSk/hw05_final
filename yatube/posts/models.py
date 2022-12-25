@@ -55,7 +55,9 @@ class Post(models.Model):
         ordering = ('-pub_date',)
 
     def __str__(self):
-        return self.text[:15]
+        return (f'Text: {self.text[:15]}, '
+                f'Group: {self.group}, '
+                f'Author: {self.author.username}')
 
 
 class Comment(models.Model):

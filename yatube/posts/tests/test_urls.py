@@ -47,6 +47,8 @@ class URLSTests(TestCase):
         cls.guest_client = Client()
         cls.authorized_client = Client()
         cls.not_author = Client()
+        cls.another_author_client = Client()
+        cls.another_author_client.force_login(URLSTests.another_author_user)
         cls.authorized_client.force_login(URLSTests.author_user)
         cls.not_author.force_login(URLSTests.no_author)
 
@@ -67,7 +69,7 @@ class URLSTests(TestCase):
             (PROFILE_FOLLOW_URL, self.authorized_client, 302),
             (PROFILE_ULR, self.guest_client, 200),
             (PROFILE_UNFOLLOW_URL, self.guest_client, 302),
-            (PROFILE_UNFOLLOW_URL, self.not_author, 302),
+            (PROFILE_UNFOLLOW_URL, self.another_author_client, 404),
             (PROFILE_UNFOLLOW_URL, self.authorized_client, 302),
             (self.DETAIL_URL, self.guest_client, 200),
             (self.EDIT_URL, self.guest_client, 302),
@@ -87,7 +89,6 @@ class URLSTests(TestCase):
             (PROFILE_FOLLOW_URL, self.authorized_client, ANOTHER_PROFILE_URL),
             (PROFILE_UNFOLLOW_URL, self.guest_client,
              PROFILE_UNFOLLOW_GUESTS_URL),
-            (PROFILE_UNFOLLOW_URL, self.not_author, ANOTHER_PROFILE_URL),
             (PROFILE_UNFOLLOW_URL, self.authorized_client,
              ANOTHER_PROFILE_URL),
             (self.EDIT_URL, self.not_author, self.DETAIL_URL),

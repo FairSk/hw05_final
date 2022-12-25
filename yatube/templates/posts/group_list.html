@@ -11,7 +11,7 @@
   <p>{{group.description|linebreaks }}</p>
   {% include 'posts/includes/paginator.html' %}
   {% for post in page_obj %}
-  {% include 'posts/includes/show_posts.html' %}
+    {% include 'posts/includes/show_post.html' %}
   {% endfor %}
 
   {% endblock %}
