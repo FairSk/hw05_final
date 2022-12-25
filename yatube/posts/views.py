@@ -33,9 +33,11 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     return render(request, 'posts/profile.html', {
         'page_obj': pager(request, author.posts.all()),
-        'author': author, 'following': request.user.is_authenticated
-        and request.user != author
-        and author.following.filter(user=request.user).exists()})
+        'author': author,
+        'following':
+            request.user.is_authenticated
+            and request.user != author
+            and author.following.filter(user=request.user).exists()})
 
 
 def post_detail(request, post_id):
@@ -102,6 +104,9 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
-    get_object_or_404(Follow, user=request.user,
-                      author__username=username).delete()
+    get_object_or_404(
+        Follow,
+        user=request.user,
+        author__username=username
+    ).delete()
     return redirect('posts:profile', username=username)

@@ -1,6 +1,4 @@
 {% extends 'base.html' %}
-{% load thumbnail %}
-
 
 {% block title %}
   {{ group.title }}
@@ -12,6 +10,7 @@
   {% include 'posts/includes/paginator.html' %}
   {% for post in page_obj %}
     {% include 'posts/includes/show_post.html' %}
+    {% if not forloop.last %}<hr>{% endif %}
   {% endfor %}
 
   {% endblock %}

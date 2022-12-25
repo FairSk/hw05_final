@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.db import models
 
 User = get_user_model()
+OUTPUT_DATA_POST = 'Text: {}, Group: {}, Author: {}'
+OUTPUT_DATA_FOLLOW = '{} -> {}'
 
 
 class Group(models.Model):
@@ -55,9 +57,11 @@ class Post(models.Model):
         ordering = ('-pub_date',)
 
     def __str__(self):
-        return (f'Text: {self.text[:15]}, '
-                f'Group: {self.group}, '
-                f'Author: {self.author.username}')
+        return OUTPUT_DATA_POST.format(
+            self.text[:15],
+            self.group,
+            self.author.username
+        )
 
 
 class Comment(models.Model):
@@ -104,11 +108,13 @@ class Follow(models.Model):
         verbose_name='Автор'
     )
 
-    def __str__(self):
-        return f'{self.user.username} -> {self.author.username}'
-
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
         constraints = [models.UniqueConstraint(fields=['user', 'author'],
                                                name='unique_follow')]
+
+    def __str__(self):
+        return OUTPUT_DATA_FOLLOW.format(
+            self.user.username,
+            self.author.username)

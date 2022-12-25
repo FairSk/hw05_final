@@ -6,7 +6,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from ..apps import PostsConfig
 from ..models import Group, Post, User, Comment
 
 LOGIN_URL = reverse('users:login')
@@ -39,7 +38,17 @@ class FormsTest(TestCase):
             content=SMALL_GIF,
             content_type='gif'
         )
+        cls.post_uploaded = SimpleUploadedFile(
+            name='post_small.gif',
+            content=SMALL_GIF,
+            content_type='gif'
+        )
         cls.another_uploaded = SimpleUploadedFile(
+            name='another_small.gif',
+            content=SMALL_GIF,
+            content_type='gif'
+        )
+        cls.absolute_another_uploaded = SimpleUploadedFile(
             name='another_small.gif',
             content=SMALL_GIF,
             content_type='gif'
@@ -59,7 +68,8 @@ class FormsTest(TestCase):
         cls.post = Post.objects.create(
             text='Тестовый текст',
             author=FormsTest.author,
-            group=FormsTest.group
+            group=FormsTest.group,
+            image=FormsTest.post_uploaded
         )
         cls.EDIT_URL = reverse('posts:post_edit', args=[FormsTest.post.id])
         cls.EDIT_NOT_AUTHOR_URL = f'{LOGIN_URL}?next={cls.EDIT_URL}'
@@ -94,8 +104,9 @@ class FormsTest(TestCase):
         self.assertEqual(post.author, self.author)
         self.assertEqual(post.group.id, form_data['group'])
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(post.image.name, (f'{PostsConfig.name}/'
-                                           f'{form_data["image"].name}'))
+        self.assertEqual(post.image.name,
+                         (f'{Post._meta.get_field("image").upload_to}'
+                          f'{form_data["image"].name}'))
         self.assertRedirects(response, PROFILE_ULR)
 
     def test_edit_post_form(self):
@@ -111,8 +122,9 @@ class FormsTest(TestCase):
         self.assertEqual(post.text, form_data['text'])
         self.assertEqual(post.author, self.post.author)
         self.assertEqual(post.group.id, form_data['group'])
-        self.assertEqual(post.image.name, (f'{PostsConfig.name}/'
-                                           f'{form_data["image"].name}'))
+        self.assertEqual(post.image.name,
+                         (f'{Post._meta.get_field("image").upload_to}'
+                          f'{form_data["image"].name}'))
         self.assertRedirects(response, self.DETAIL_URL)
 
     def test_create_commment_form(self):
@@ -161,14 +173,15 @@ class FormsTest(TestCase):
         form_data = {
             'text': 'Текст для измененного поста не автором',
             'group': self.another_group.id,
-            'image': self.uploaded
+            'image': self.absolute_another_uploaded
         }
         for client, expected_redirect in CASES:
             with self.subTest(client=client):
                 response = self.client.post(self.EDIT_URL,
                                             data=form_data, follow=True)
                 post = Post.objects.get(id=self.post.id)
+                self.assertEqual(post.image.name, self.post.image.name)
                 self.assertEqual(post.text, self.post.text)
                 self.assertEqual(post.author, self.post.author)
-                self.assertEqual(post.group.id, self.post.group.id)
+                self.assertEqual(post.group, self.post.group)
                 self.assertRedirects(response, expected_redirect)

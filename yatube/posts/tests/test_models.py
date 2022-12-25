@@ -1,6 +1,7 @@
 from django.test import TestCase
 
-from ..models import Post, User, Group, Comment, Follow
+from ..models import (Post, User, Group, Comment, Follow,
+                      OUTPUT_DATA_FOLLOW, OUTPUT_DATA_POST)
 
 
 class ModelTests(TestCase):
@@ -30,13 +31,16 @@ class ModelTests(TestCase):
 
     def test_str_function(self):
         object_names = [
-            (self.post, (f'Text: {self.post.text[:15]}, '
-                         f'Group: {self.post.group}, '
-                         f'Author: {self.post.author.username}')),
+            (self.post, OUTPUT_DATA_POST.format(
+                self.post.text[:15],
+                self.post.group,
+                self.post.author.username
+            )),
             (self.group, self.group.title),
             (self.comment, self.comment.text[:20]),
-            (self.subscription, (f'{self.subscription.user.username} -> '
-                                 f'{self.subscription.author.username}'))
+            (self.subscription, OUTPUT_DATA_FOLLOW.format(
+                self.subscription.user.username,
+                self.subscription.author.username))
         ]
         for task, expected_output in object_names:
             with self.subTest(task=task):
